@@ -1,0 +1,54 @@
+package networking.ingress;
+
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import partitioning.PartitionManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+
+
+import java.io.IOException;
+
+public class GrpcServer {
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcServer.class);
+    private final int port;
+    private final Server server;
+
+    public GrpcServer(int port, PartitionManager partitionManager) {
+        this(ServerBuilder.forPort(port), partitionManager, port);
+    }
+
+    public GrpcServer(ServerBuilder<?> builder, PartitionManager partitionManager, int port){
+        this.port = port;
+        server = builder
+                //.addService() //create new service implementation instance
+                .build();
+    }
+
+    public void start() throws IOException {
+        logger.info("Starting Server...");
+        if(server != null){
+            server.start();
+            logger.info("gRPC server has started (listerning on port " + port + ")");
+        }
+    }
+
+    public void stop() throws InterruptedException {
+        if (server != null) {
+            server.shutdownNow();
+            server.awaitTermination();
+            logger.info("gRPC server shut down");
+        }
+    }
+
+    private void blockUntilShutdown() throws InterruptedException {
+        if (server != null) {
+            server.awaitTermination();
+        }
+    }
+
+
+}
