@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.health.v1.HealthCheckResponse;
+import io.grpc.protobuf.services.HealthStatusManager;
 
 
 import java.io.IOException;
@@ -16,6 +18,7 @@ public class GrpcServer {
     private static final Logger logger = LoggerFactory.getLogger(GrpcServer.class);
     private final int port;
     private final Server server;
+    private final HealthStatusManager healthManager;
 
     public GrpcServer(int port, PartitionManager partitionManager) {
         this(ServerBuilder.forPort(port), partitionManager, port);
@@ -23,6 +26,7 @@ public class GrpcServer {
 
     public GrpcServer(ServerBuilder<?> builder, PartitionManager partitionManager, int port){
         this.port = port;
+        this.healthManager = new HealthStatusManager();
         server = builder
                 //.addService() //create new service implementation instance
                 .build();
@@ -32,6 +36,7 @@ public class GrpcServer {
         logger.info("Starting Server...");
         if(server != null){
             server.start();
+            setServingStatus(false); // Until Raft confirms its ready
             logger.info("gRPC server has started (listerning on port " + port + ")");
         }
     }
@@ -47,6 +52,15 @@ public class GrpcServer {
     private void blockUntilShutdown() throws InterruptedException {
         if (server != null) {
             server.awaitTermination();
+        }
+    }
+
+    public void setServingStatus(boolean isServing) {
+        // An empty string "" is the recommended service name for health checking the entire server
+        if (isServing) {
+            healthManager.setStatus("", HealthCheckResponse.ServingStatus.SERVING);
+        } else {
+            healthManager.setStatus("", HealthCheckResponse.ServingStatus.NOT_SERVING);
         }
     }
 

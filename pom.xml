@@ -78,6 +78,11 @@
       <artifactId>grpc-testing</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-services</artifactId>
+      <version>1.62.2</version> <!-- Use a recent version -->
+    </dependency>
+    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <version>5.1.1</version>

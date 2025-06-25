@@ -1,0 +1,113 @@
+# =================================================================
+#  Headless Service for Peer Discovery
+#  - Creates stable DNS records for each pod in the StatefulSet.
+#  - Examples: kv-store-0.kv-store-peers, kv-store-1.kv-store-peers
+# =================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: kv-store-peers
+  labels:
+    app: kv-store
+spec:
+  ports:
+    - name: grpc-internal # Port for ourr inter-node communication
+      port: 8081
+      targetPort: 8081
+  clusterIP: None # Headless Service
+  selector:
+    app: kv-store
+
+---
+# =================================================================
+#  Client-Facing Service for Producers/Consumers (single entry point)
+# =================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: kv-store-client
+  labels:
+    app: kv-store
+spec:
+  type: NodePort
+  ports:
+    - name: grpc-client
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: kv-store
+
+---
+# =================================================================
+#  StatefulSet for the Key-Value Store Nodes
+# =================================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kv-store
+spec:
+  selector:
+    matchLabels:
+      app: kv-store
+  serviceName: "kv-store-peers"
+  replicas: 3 # Number of Nodes. Possibly scaling like: kubectl scale statefulset kv-store --replicas=5 ? -> Nodes must be dynamically detectable
+  template:
+    metadata:
+      labels:
+        app: kv-store
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: scalability-demo
+          image: ghcr.io/chris-1187/scalability-demo:latest # TODO
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi" # Probably better to use VPA
+              cpu: "2"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: grpc-client
+            - containerPort: 8081
+              name: grpc-internal
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PEER_SERVICE_NAME
+              value: "kv-store-peers"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: REPLICA_COUNT
+              value: "3" # Number of Nodes
+          volumeMounts:
+            - name: data-storage
+              mountPath: /var/data/kv-store # Mount the persistent volume here
+
+          # readinessProbe:
+          #   exec:
+          #     command: ["/bin/grpc_health_probe", "-addr=:8080"]
+          #   initialDelaySeconds: 15
+          # livenessProbe:
+          #   exec:
+          #     command: ["/bin/grpc_health_probe", "-addr=:8080"]
+          #   initialDelaySeconds: 30
+
+  # =================================================================
+  #  Volume Claim Template
+  #  - Creates a PersistentVolumeClaim for each pod.
+  # =================================================================
+  volumeClaimTemplates:
+    - metadata:
+        name: data-storage
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi # For each Node

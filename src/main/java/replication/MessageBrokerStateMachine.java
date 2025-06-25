@@ -19,6 +19,11 @@ import java.util.Map;
 public class MessageBrokerStateMachine implements StateMachine {
 
     private final Map<String, MessageQueue> queues = new HashMap<>(); //TODO this will probably be moved somewhere else
+    private networking.ingress.GrpcServer grpcServer;
+
+    public MessageBrokerStateMachine(networking.ingress.GrpcServer grpcServer) {
+        this.grpcServer = grpcServer;
+    }
 
     @Override
     public void onApply(Iterator iterator) {
