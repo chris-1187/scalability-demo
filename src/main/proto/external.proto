@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option java_package = "org.example.qservice";
+import "google/protobuf/empty.proto";
+
+service QService {
+  rpc Push(QueueItem) returns (EnqueueResponse);
+  rpc Peek(Queue) returns (QueueItem);
+  rpc Pop(UUID) returns (google.protobuf.Empty);
+}
+
+message UUID {
+  string id = 1;
+}
+
+message Queue {
+  string name = 1;
+}
+
+message QueueItem {
+  Queue queue = 1;
+  string payload = 2;
+  optional UUID requestId = 3;
+}
+
+message EnqueueResponse {
+  UUID requestId = 1;
+  bool success = 2;
+}
+
