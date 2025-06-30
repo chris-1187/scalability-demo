@@ -3,6 +3,9 @@ package misc;
 import java.time.Duration;
 
 public class Constants {
+
+    public static final int RAFT_PORT = 9999;
+
     public final static Duration REDELIVERY_TIMEOUT = Duration.ofSeconds(1);
 
     public final static int ELECTION_TIMEOUT_MS = 5000;

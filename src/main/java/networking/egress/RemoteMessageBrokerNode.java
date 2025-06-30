@@ -1,17 +1,17 @@
 package networking.egress;
 
 import io.grpc.*;
+import misc.Constants;
 
 
 public class RemoteMessageBrokerNode extends MessageBrokerNode {
 
-    private static final int RAFT_PORT = 9999;
     private boolean healthy;
 
     public RemoteMessageBrokerNode(String hostname) {
         super(hostname);
         healthy = true;
-        raftPort = RAFT_PORT;
+        raftPort = Constants.RAFT_PORT;
     }
 
     @Override
