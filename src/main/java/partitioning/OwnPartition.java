@@ -17,12 +17,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class OwnPartition extends Partition {
 
     private final List<MessageBrokerNode> peers;
     private final Node raftNode;
     private final MessageBrokerStateMachine stateMachine;
+    private ReentrantLock leaseLock = new ReentrantLock();
     private volatile Instant leaseTimeout = Instant.MIN;
 
     public OwnPartition(int ringPosition, MessageBrokerNode self, List<MessageBrokerNode> peers){
@@ -94,13 +96,17 @@ public class OwnPartition extends Partition {
                     Thread.sleep(Constants.LEASE_REFRESH_MS);
                     if(!raftNode.isLeader())
                         continue;
+                    Instant leaseBegin = Instant.now();
                     raftNode.readIndex("ctx".getBytes(StandardCharsets.UTF_8), new ReadIndexClosure() {
                         @Override
                         public void run(Status status, long index, byte[] reqCtx) {
                             if (status.isOk()) {
-                                leaseTimeout = Instant.now().plus(Constants.LEASE_TIMEOUT_MS);
+                                leaseLock.lock();
+                                Instant leaseEnd = leaseBegin.plus(Constants.LEASE_TIMEOUT_MS);
+                                if(leaseEnd.compareTo(leaseTimeout) > 0)
+                                    leaseTimeout = leaseEnd;
+                                leaseLock.unlock();
                             }
-
                         }
                     });
                 }
