@@ -1,14 +1,14 @@
 package partitioning;
 
-import networking.egress.Node;
+import networking.egress.MessageBrokerNode;
 
 import java.util.List;
 
 public class ForeignPartition extends Partition {
 
-    private final List<Node> nodes;
+    private final List<MessageBrokerNode> nodes;
 
-    public ForeignPartition(int ringPosition, List<Node> nodes){
+    public ForeignPartition(int ringPosition, List<MessageBrokerNode> nodes){
         this.ringPosition = ringPosition;
         this.nodes = nodes;
     }

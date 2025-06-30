@@ -2,10 +2,11 @@ package networking.egress;
 
 import io.grpc.inprocess.InProcessChannelBuilder;
 
-public class MockNode extends Node {
+public class MockMessageBrokerNode extends MessageBrokerNode {
 
-    public MockNode(String name) {
+    public MockMessageBrokerNode(String name, int raftPort) {
         super(name);
+        this.raftPort = raftPort;
     }
 
     @Override
