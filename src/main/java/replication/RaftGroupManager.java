@@ -66,7 +66,9 @@ public class RaftGroupManager {
         for(MessageBrokerNode node : peers){
             if(node == self)
                 continue;
-            configuration.addPeer(PeerId.parsePeer(parseNode(node)));
+            PeerId peerId = PeerId.parsePeer(parseNode(node));
+            configuration.addPeer(peerId);
+            node.setRaftPeerID(peerId);
         }
 
         nodeOptions.setInitialConf(configuration);
