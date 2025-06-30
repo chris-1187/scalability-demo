@@ -15,4 +15,6 @@ public class Constants {
     public final static Duration LEASE_TIMEOUT_MS = Duration.ofMillis(500);
     public final static int LEASE_REFRESH_MS = 100;
 
+    public final static int RAFT_PORT = 9999;
+
 }

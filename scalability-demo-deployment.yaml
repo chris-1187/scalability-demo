@@ -14,6 +14,9 @@ spec:
     - name: grpc-internal # Port for ourr inter-node communication
       port: 8081
       targetPort: 8081
+    - name: raft # For Raft
+      port: 9999
+      targetPort: 9999
   clusterIP: None # Headless Service
   selector:
     app: kv-store
@@ -70,6 +73,8 @@ spec:
               name: grpc-client
             - containerPort: 8081
               name: grpc-internal
+            - containerPort: 9999  # Also Raft
+              name: raft
           env:
             - name: POD_NAME
               valueFrom:
