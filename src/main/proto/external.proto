@@ -1,30 +1,49 @@
 syntax = "proto3";
 
 option java_package = "org.example.qservice";
-import "google/protobuf/empty.proto";
 
 service QService {
-  rpc Push(QueueItem) returns (EnqueueResponse);
-  rpc Peek(Queue) returns (QueueItem);
-  rpc Pop(UUID) returns (google.protobuf.Empty);
+  rpc Push(PushRequest) returns (PushResponse);
+  rpc Peek(PeekRequest) returns (PeekResponse);
+  rpc Pop(PopRequest) returns (PopResponse);
 }
 
-message UUID {
-  string id = 1;
-}
-
-message Queue {
-  string name = 1;
-}
-
-message QueueItem {
-  Queue queue = 1;
+message Message {
+  string message_id = 1;
   string payload = 2;
-  optional UUID requestId = 3;
+  int64 logIndex = 3;
 }
 
-message EnqueueResponse {
-  UUID requestId = 1;
-  bool success = 2;
+// Request to push a new message.
+message PushRequest {
+  string queue_name = 1;
+  string message_content = 2;
+  string message_id = 3; // Client-provided UUID to allow for idempotent pushes
+}
+// Response for a push operation.
+message PushResponse {
+  bool success = 1; // On success
+}
+
+// Request to peek at a message.
+message PeekRequest {
+  string queue_name = 1;
+  // Optional token for ensuring "at-least-once"
+  string client_token = 2;
+}
+// Response for a peek operation.
+message PeekResponse {
+  optional Message message = 1;
+  bool found = 2;
+}
+
+// Request to pop (commit) a message.
+message PopRequest {
+  string queue_name = 1;
+  string message_id = 2; // The ID of the message to commit
+}
+// Response for a pop operation.
+message PopResponse {
+  bool success = 1; // On success
 }
 

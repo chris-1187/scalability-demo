@@ -35,7 +35,7 @@ public class OwnPartition extends Partition {
         (new LeaseRenewalThread()).start();
     }
 
-    public void push(){
+    public CompletableFuture<Status> push(String queueName, String messageContent, UUID messageId){
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
             PushEntry entry = new PushEntry("queue1", "Hello World!", UUID.randomUUID());
             CompletableFuture<Status> futureStatus = entry.submit(raftNode);
@@ -46,9 +46,10 @@ public class OwnPartition extends Partition {
                 //TODO forward call to leaderNode
             }
         }
+        return CompletableFuture.completedFuture(new Status(-1, "Not a leader"));
     }
 
-    public void pop(){
+    public CompletableFuture<Status> pop(String queueName, UUID messageId){
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
             PopEntry entry = new PopEntry("queue1", UUID.randomUUID());
             CompletableFuture<Status> futureStatus = entry.submit(raftNode);
@@ -59,21 +60,25 @@ public class OwnPartition extends Partition {
                 //TODO forward call to leaderNode
             }
         }
+        return CompletableFuture.completedFuture(new Status(-1, "Not a leader"));
     }
 
-    public void peek(){
-        if(leaseTimeout.compareTo(Instant.now()) > 0){
-            //peekWithTimeout will prevent early redeliveries of messages that were already delivered to another client
-            //can submit a client token for fault tolerance, so that the same client can read the message again if neccessary
-            Optional<Message> message = stateMachine.peekWithTimeout("queue1", Optional.of("some_client_ID_or_token"));
-            //TODO client response
-        } else {
-            Optional<MessageBrokerNode> leaderNode = getLeaderNode();
-            if(leaderNode.isPresent()){
-                //TODO forward call to leaderNode
+    @Override
+    public Optional<queue.Message> peek(String queueName, Optional<String> clientToken) {
+        // We don't need to check leadership for reads, as we use readIndex in the lease mechanism
+        // The lease mechanism ensures we don't serve stale reads
+        leaseLock.lock();
+        try {
+            if (Instant.now().compareTo(leaseTimeout) < 0) {
+                return stateMachine.peekWithTimeout(queueName, clientToken);
             }
+            // We don't have a valid lease, return empty to avoid serving potentially stale data
+            return Optional.empty();
+        } finally {
+            leaseLock.unlock();
         }
     }
+
 
     private Optional<MessageBrokerNode> getLeaderNode(){
         PeerId leader = raftNode.getLeaderId(); //This info can also be stale in theory

@@ -9,6 +9,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.health.v1.HealthCheckResponse;
 import io.grpc.protobuf.services.HealthStatusManager;
+import networking.QService;
 
 
 import java.io.IOException;
@@ -27,8 +28,10 @@ public class GrpcServer {
     public GrpcServer(ServerBuilder<?> builder, PartitionManager partitionManager, int port){
         this.port = port;
         this.healthManager = new HealthStatusManager();
+        QService qService = new QService(partitionManager);
         server = builder
-                //.addService() //create new service implementation instance
+                .addService(qService)
+                .addService(healthManager.getHealthService())
                 .build();
     }
 
@@ -63,6 +66,5 @@ public class GrpcServer {
             healthManager.setStatus("", HealthCheckResponse.ServingStatus.NOT_SERVING);
         }
     }
-
 
 }
