@@ -6,7 +6,7 @@ public class Constants {
 
     public final static Duration REDELIVERY_TIMEOUT = Duration.ofSeconds(1);
 
-    public final static int ELECTION_TIMEOUT_MS = 5000;
+    public final static int ELECTION_TIMEOUT_MS = 1000;
 
     public final static int SNAPSHOT_INTERVAL_SEC = 1;
 
