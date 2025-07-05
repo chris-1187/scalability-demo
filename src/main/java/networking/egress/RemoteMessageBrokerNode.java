@@ -14,39 +14,7 @@ import java.util.function.Function;
 
 public class RemoteMessageBrokerNode extends MessageBrokerNode {
 
-    private volatile boolean healthy = true;
-    private volatile Instant ignoreTimeout = Instant.MIN;
 
-    private QServiceGrpc.QServiceBlockingStub qServiceStub;
-
-
-    //usage: sendWithRetry<RequestProtobufType, ResponseProtobufType>(request, qServiceStub::pop)
-    public <RequestT extends GeneratedMessageV3, ResponseT extends GeneratedMessageV3>
-    Optional<ResponseT> sendWithRetry(RequestT requestMessage, Function<RequestT, ResponseT> stub) {
-        if(!healthy && ignoreTimeout.compareTo(Instant.now()) > 0){ //should usually not happen if one calls isHealthy() before
-            return Optional.empty();
-        }
-        int i = -1;
-        try {
-            while (i < Constants.retries){
-                i++;
-                try {
-                    ResponseT response = stub.apply(requestMessage);
-                    healthy = true;
-                    return Optional.of(response);
-                } catch (StatusRuntimeException e){
-                    long waitTime = (long) (Constants.initialBackoffMillis * Math.pow(Constants.backoffMultiplier, i)
-                            + ThreadLocalRandom.current().nextLong(-Constants.jitterMaxMillis, Constants.jitterMaxMillis));
-                    Thread.sleep(waitTime);
-                }
-            }
-        } catch (InterruptedException e){
-            return Optional.empty();
-        }
-        healthy = false;
-        ignoreTimeout = Instant.now().plus(Constants.unhealthyNodeIgnoreTimeoutMillis);
-        return Optional.empty();
-    }
 
 
     public RemoteMessageBrokerNode(String hostname) {
@@ -75,9 +43,7 @@ public class RemoteMessageBrokerNode extends MessageBrokerNode {
         return healthy || ignoreTimeout.compareTo(Instant.now()) < 0;
     }
 
-    public QServiceGrpc.QServiceBlockingStub getqServiceStub() {
-        return qServiceStub;
-    }
+
 
 }
 

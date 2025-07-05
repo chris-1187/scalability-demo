@@ -1,6 +1,7 @@
 package partitioning;
 
 import com.alipay.sofa.jraft.Status;
+import org.example.qservice.External;
 import queue.Message;
 
 import java.util.Optional;
@@ -15,28 +16,28 @@ public abstract class Partition {
         return ringPosition;
     }
 
-    public abstract Optional<Message> peek(String queueName, Optional<String> clientToken);
+    public abstract External.PeekResponse peek(String queueName, Optional<String> clientToken);
 
     /**
-     * Asynchronously pushes a message to a queue within the partition.
+     * Pushes a message to a queue within the partition.
      * In an OwnPartition, this will be applied to the Raft group.
      * In a ForeignPartition, this will be forwarded to a node in that partition.
      *
      * @param queueName The name of the queue.
      * @param messageContent The content of the message.
      * @param messageId The unique ID of the message.
-     * @return A CompletableFuture that completes with the Status of the operation.
+     * @return The status of the completed operation
      */
-    public abstract CompletableFuture<Status> push(String queueName, String messageContent, UUID messageId);
+    public abstract Status push(String queueName, String messageContent, UUID messageId);
 
     /**
-     * Asynchronously pops (commits) a message from a queue within the partition.
+     * Pops (commits) a message from a queue within the partition.
      * In an OwnPartition, this will be applied to the Raft group.
      * In a ForeignPartition, this will be forwarded to a node in that partition.
      *
      * @param queueName The name of the queue.
      * @param messageId The unique ID of the message to commit.
-     * @return A CompletableFuture that completes with the Status of the operation.
+     * @return The status of the completed operation
      */
-    public abstract CompletableFuture<Status> pop(String queueName, UUID messageId);
+    public abstract Status pop(String queueName, UUID messageId);
 }

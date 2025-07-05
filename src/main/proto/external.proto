@@ -11,7 +11,6 @@ service QService {
 message Message {
   string message_id = 1;
   string payload = 2;
-  int64 logIndex = 3;
 }
 
 // Request to push a new message.

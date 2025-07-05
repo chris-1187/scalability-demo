@@ -4,9 +4,9 @@ import com.alipay.sofa.jraft.Node;
 import com.alipay.sofa.jraft.Status;
 import com.alipay.sofa.jraft.closure.ReadIndexClosure;
 import com.alipay.sofa.jraft.entity.PeerId;
-import com.alipay.sofa.jraft.util.Endpoint;
 import misc.Constants;
 import networking.egress.MessageBrokerNode;
+import org.example.qservice.External;
 import queue.Message;
 import replication.MessageBrokerStateMachine;
 import replication.PopEntry;
@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class OwnPartition extends Partition {
@@ -35,48 +36,80 @@ public class OwnPartition extends Partition {
         (new LeaseRenewalThread()).start();
     }
 
-    public CompletableFuture<Status> push(String queueName, String messageContent, UUID messageId){
+    public Status push(String queueName, String messageContent, UUID messageId){
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
-            PushEntry entry = new PushEntry("queue1", "Hello World!", UUID.randomUUID());
+            PushEntry entry = new PushEntry(queueName, messageContent, UUID.randomUUID());
             CompletableFuture<Status> futureStatus = entry.submit(raftNode);
-            //TODO await future and return status for client response
+            try {
+                return futureStatus.get();
+            } catch (InterruptedException | ExecutionException e) {
+                return new Status(-1, "Appending push entry failed");
+            }
         } else {
             Optional<MessageBrokerNode> leaderNode = getLeaderNode();
             if(leaderNode.isPresent()){
-                //TODO forward call to leaderNode
+                Optional<External.PushResponse> response = leaderNode.get().push(queueName, messageContent, messageId);
+                if (response.isPresent()) {
+                    return response.get().getSuccess() ? Status.OK() : new Status(-1, "Push request failed server side");
+                } else {
+                    System.err.println("Request to current leader failed");
+                }
             }
         }
-        return CompletableFuture.completedFuture(new Status(-1, "Not a leader"));
+        return new Status(-1, "Leader not found");
     }
 
-    public CompletableFuture<Status> pop(String queueName, UUID messageId){
+    public Status pop(String queueName, UUID messageId){
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
-            PopEntry entry = new PopEntry("queue1", UUID.randomUUID());
+            PopEntry entry = new PopEntry(queueName, UUID.randomUUID());
             CompletableFuture<Status> futureStatus = entry.submit(raftNode);
-            //TODO await future and return status for client response
+            try {
+                return futureStatus.get();
+            } catch (InterruptedException | ExecutionException e) {
+                return new Status(-1, "Appending pop entry failed");
+            }
         } else {
             Optional<MessageBrokerNode> leaderNode = getLeaderNode();
             if(leaderNode.isPresent()){
-                //TODO forward call to leaderNode
+                Optional<External.PopResponse> response = leaderNode.get().pop(queueName, messageId);
+                if (response.isPresent()) {
+                    return response.get().getSuccess() ? Status.OK() : new Status(-1, "Pop request failed server side");
+                } else {
+                    System.err.println("Request to current leader failed");
+                }
             }
         }
-        return CompletableFuture.completedFuture(new Status(-1, "Not a leader"));
+        return new Status(-1, "Leader not found");
     }
 
     @Override
-    public Optional<queue.Message> peek(String queueName, Optional<String> clientToken) {
-        // We don't need to check leadership for reads, as we use readIndex in the lease mechanism
-        // The lease mechanism ensures we don't serve stale reads
+    public External.PeekResponse peek(String queueName, Optional<String> clientToken) {
+        // Instead of checking for leadership for every peek, we use a lease provided through read index, which confirms leadership of the current node
         leaseLock.lock();
         try {
-            if (Instant.now().compareTo(leaseTimeout) < 0) {
-                return stateMachine.peekWithTimeout(queueName, clientToken);
+            if(raftNode.isLeader() && Instant.now().compareTo(leaseTimeout) < 0){
+                Optional<Message> message = stateMachine.peekWithTimeout(queueName, clientToken);
+                if(message.isPresent()){
+                    External.Message messageResponse = External.Message.newBuilder().
+                            setMessageId(message.get().getMessageId().toString()).
+                            setPayload(message.get().getPayload()).
+                            build();
+                    return External.PeekResponse.newBuilder().setFound(true).setMessage(messageResponse).build();
+                }
+            // Else, we don't have a valid lease, return empty to avoid serving potentially stale data
+            } else {
+                Optional<MessageBrokerNode> leaderNode = getLeaderNode();
+                if(leaderNode.isPresent()){
+                    Optional<External.PeekResponse> optionalResponse = leaderNode.get().peek(queueName, clientToken);
+                    if(optionalResponse.isPresent())
+                        return optionalResponse.get();
+                }
             }
-            // We don't have a valid lease, return empty to avoid serving potentially stale data
-            return Optional.empty();
+
         } finally {
             leaseLock.unlock();
         }
+        return External.PeekResponse.newBuilder().setFound(false).build();
     }
 
 
