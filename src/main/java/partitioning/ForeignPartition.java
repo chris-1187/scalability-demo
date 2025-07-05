@@ -37,21 +37,18 @@ public class ForeignPartition extends Partition {
                     .setMessageId(messageId.toString())
                     .build();
 
-            // Iterate through the nodes of the foreign partition to find the leader and process the request.
+            //Iterate to find the first responsive node
             for (MessageBrokerNode node : nodes) {
+                if(!node.isHealthy())
+                    continue;
                 try {
                     RemoteMessageBrokerNode remoteNode = (RemoteMessageBrokerNode) node;
-
-                    PushResponse response = remoteNode.getqServiceStub().push(request);
-
-                    // A success response means we found the leader and the operation was accepted.
-                    // A failure response likely means this node was not the leader, so we continue the loop.
-                    if (response.getSuccess()) {
-                        return Status.OK();
+                    Optional<PushResponse> response = remoteNode.sendWithRetry(request, remoteNode.getqServiceStub()::push);
+                    if (response.isPresent()) {
+                        return response.get().getSuccess() ? Status.OK() : new Status(-1, "Pop request failed server side");
+                    } else {
+                        System.err.println("Request to " + node.getHostname() + " failed, trying next node.");
                     }
-                } catch (StatusRuntimeException e) {
-
-                    System.err.println("Request to " + node.getHostname() + " failed, trying next node. Reason: " + e.getStatus());
                 } catch(Exception e) {
                     System.err.println("An unexpected error occurred while forwarding to " + node.getHostname() + ": " + e.getMessage());
                 }
@@ -69,17 +66,18 @@ public class ForeignPartition extends Partition {
                     .setMessageId(messageId.toString())
                     .build();
 
+            //Iterate to find the first responsive node
             for (MessageBrokerNode node : nodes) {
+                if(!node.isHealthy())
+                    continue;
                 try {
                     RemoteMessageBrokerNode remoteNode = (RemoteMessageBrokerNode) node;
-                    // TODO: Add a getter for the gRPC stub in RemoteMessageBrokerNode
-                    // For example: public QServiceGrpc.QServiceBlockingStub getqServiceStub() { return qServiceStub; }
-                    PopResponse response = remoteNode.getqServiceStub().pop(request);
-                    if (response.getSuccess()) {
-                        return Status.OK();
+                    Optional<PopResponse> response = remoteNode.sendWithRetry(request, remoteNode.getqServiceStub()::pop);
+                    if (response.isPresent()) {
+                        return response.get().getSuccess() ? Status.OK() : new Status(-1, "Pop request failed server side");
+                    } else {
+                        System.err.println("Request to " + node.getHostname() + " failed, trying next node.");
                     }
-                } catch (StatusRuntimeException e) {
-                    System.err.println("Request to " + node.getHostname() + " failed, trying next node. Reason: " + e.getStatus());
                 } catch(Exception e) {
                     System.err.println("An unexpected error occurred while forwarding to " + node.getHostname() + ": " + e.getMessage());
                 }
@@ -96,24 +94,29 @@ public class ForeignPartition extends Partition {
                 .setClientToken(clientToken.orElse(""))
                 .build();
 
+        //Iterate to find the first responsive node
         for (MessageBrokerNode node : nodes) {
+            if(!node.isHealthy())
+                continue;
             try {
                 RemoteMessageBrokerNode remoteNode = (RemoteMessageBrokerNode) node;
-                PeekResponse response = remoteNode.getqServiceStub().peek(request);
+                Optional<PeekResponse> optionalResponse = remoteNode.sendWithRetry(request, remoteNode.getqServiceStub()::peek);
 
-                // Reconstruct the Message object from the gRPC response.
-                if (response.hasMessage()) {
-                    return Optional.of(new Message(
-                            UUID.fromString(response.getMessage().getMessageId()),
-                            response.getMessage().getPayload(),
-                            response.getMessage().getLogIndex()
-                    ));
-                } else if(response.getFound()) {
-                    return Optional.empty();
+                if(optionalResponse.isPresent()){
+                    // Reconstruct the Message object from the gRPC response.
+                    PeekResponse response = optionalResponse.get();
+                    if (response.hasMessage()) {
+                        return Optional.of(new Message(
+                                UUID.fromString(response.getMessage().getMessageId()),
+                                response.getMessage().getPayload(),
+                                response.getMessage().getLogIndex()
+                        ));
+                    } else if(response.getFound()) {
+                        return Optional.empty();
+                    }
+                } else {
+                    System.err.println("Request to " + node.getHostname() + " failed, trying next node.");
                 }
-
-            } catch (StatusRuntimeException e) {
-                System.err.println("Request to " + node.getHostname() + " failed, trying next node. Reason: " + e.getStatus());
             } catch(Exception e) {
                 System.err.println("An unexpected error occurred while forwarding to " + node.getHostname() + ": " + e.getMessage());
             }

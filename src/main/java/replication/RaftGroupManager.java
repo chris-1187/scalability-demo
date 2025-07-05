@@ -74,6 +74,7 @@ public class RaftGroupManager {
         nodeOptions.setInitialConf(configuration);
 
         PeerId selfId = PeerId.parsePeer(parseNode(self));
+        self.setRaftPeerID(selfId);
 
         RaftGroupService raftGroupService = new RaftGroupService("partition", selfId, nodeOptions);
         return raftGroupService.start();

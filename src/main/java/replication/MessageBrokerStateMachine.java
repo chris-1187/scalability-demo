@@ -43,7 +43,6 @@ public class MessageBrokerStateMachine implements StateMachine {
 
     @Override
     public void onApply(Iterator iterator) {
-        System.out.println("APPLY");
         while (iterator.hasNext()){
             LogEntry entry = LogEntry.fromBuffer(iterator.getData());
             switch (entry){
@@ -65,7 +64,6 @@ public class MessageBrokerStateMachine implements StateMachine {
             if(iterator.done() != null)
                 iterator.done().run(Status.OK());
             iterator.next();
-            //TODO commit?
         }
 
     }
@@ -77,7 +75,6 @@ public class MessageBrokerStateMachine implements StateMachine {
 
     @Override
     public void onSnapshotSave(SnapshotWriter snapshotWriter, Closure closure) {
-        System.out.println("Snapshotting");
         try {
             for (Map.Entry<String, MessageQueue> queueEntry : queues.entrySet()){
                 File snapshotFile = new File(snapshotWriter.getPath(), queueEntry.getKey());
@@ -87,7 +84,6 @@ public class MessageBrokerStateMachine implements StateMachine {
                 snapshotWriter.addFile(snapshotFile.getName());
             }
             closure.run(Status.OK());
-            System.out.println("Snapshot ok");
         } catch (IOException e) {
             closure.run(new Status(RaftError.EIO, "Snapshot save failed: %s", e));
         }
@@ -95,7 +91,6 @@ public class MessageBrokerStateMachine implements StateMachine {
 
     @Override
     public boolean onSnapshotLoad(SnapshotReader snapshotReader) {
-        System.out.println("Snapshot load");
         queues.clear();
         Path dir = Paths.get(snapshotReader.getPath());
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {

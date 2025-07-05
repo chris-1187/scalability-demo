@@ -42,4 +42,6 @@ public abstract class MessageBrokerNode {
         channel.shutdown();
     }
 
+    public abstract boolean isHealthy();
+
 }

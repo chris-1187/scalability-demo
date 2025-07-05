@@ -15,4 +15,11 @@ public class Constants {
 
     public final static int RAFT_PORT = 9999;
 
+    public final static long timeoutMillis = 100;
+    public final static int retries = 3;
+    public final static long initialBackoffMillis = 100;
+    public final static double backoffMultiplier = 2;
+    public final static long jitterMaxMillis = 50;
+    public final static Duration unhealthyNodeIgnoreTimeoutMillis = Duration.ofMillis(10000);
+
 }

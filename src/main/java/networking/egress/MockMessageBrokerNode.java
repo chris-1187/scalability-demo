@@ -18,4 +18,9 @@ public class MockMessageBrokerNode extends MessageBrokerNode {
                 .build();
         //TODO create stub
     }
+
+    @Override
+    public boolean isHealthy() {
+        return true;
+    }
 }
