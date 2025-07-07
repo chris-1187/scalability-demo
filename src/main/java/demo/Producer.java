@@ -1,14 +1,11 @@
 package demo;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.example.qservice.External;
 import org.example.qservice.QServiceGrpc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.ExecutionException;
 
 public class Producer implements ProducerI, Runnable {
 
@@ -17,7 +14,7 @@ public class Producer implements ProducerI, Runnable {
     int port;
     int messageFrequency;
     String queue_name;
-    QServiceGrpc.QServiceFutureStub futureStub;
+    QServiceGrpc.QServiceBlockingStub blockingStub;
 
 
     public Producer(String host, int port, int messagesSecond, String queue_name) {
@@ -30,15 +27,13 @@ public class Producer implements ProducerI, Runnable {
     @Override
     public void run() {
         ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-        futureStub = QServiceGrpc.newFutureStub(channel);
+        blockingStub = QServiceGrpc.newBlockingStub(channel);
 
         int i = 0;
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                pushMessage(Integer.toString(i++));
+                push(Integer.toString(i++));
                 Thread.sleep(1000 / messageFrequency);
-            } catch (ExecutionException e) {
-                logger.error(e.getCause().getMessage(), e.getCause());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -46,26 +41,19 @@ public class Producer implements ProducerI, Runnable {
     }
 
     @Override
-    public boolean pushMessage(String message) throws ExecutionException {
+    public boolean push(String message) {
         String uuid = java.util.UUID.randomUUID().toString();
         External.PushRequest pushRequest = External.PushRequest.newBuilder()
                 .setMessageContent(message)
                 .setMessageId(uuid)
                 .build();
 
-        External.PushResponse pushResponse;
         boolean success = false;
         while (!success && !Thread.currentThread().isInterrupted()) {
-            ListenableFuture<External.PushResponse> push = futureStub.push(pushRequest);
-            try {
-                pushResponse = push.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
-            success = pushResponse.getSuccess();
+            logger.info("Thread: {} - pushing message {}", Thread.currentThread().getName(), pushRequest);
+            success = blockingStub.push(pushRequest).getSuccess();
         }
-        return true;
+        return success;
     }
 
 
