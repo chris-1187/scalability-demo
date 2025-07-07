@@ -88,6 +88,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: REPLICA_COUNT
               value: "3" # Number of Nodes
+            - name: RAFT_STORAGE_BASE_PATH
+              value: "/var/data/kv-store"
           volumeMounts:
             - name: data-storage
               mountPath: /var/data/kv-store # Mount the persistent volume here

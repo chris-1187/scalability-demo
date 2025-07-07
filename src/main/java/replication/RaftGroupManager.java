@@ -38,7 +38,7 @@ public class RaftGroupManager {
 
             Files.createDirectories(path);
         } catch (Exception e){
-
+            System.err.println("Error resetting directory " + dirPath + ": " + e.getMessage());
         }
 
     }
@@ -49,14 +49,23 @@ public class RaftGroupManager {
         nodeOptions.setDisableCli(false);
         nodeOptions.setSnapshotIntervalSecs(Constants.SNAPSHOT_INTERVAL_SEC);
 
-        resetDirectory("/storage/snaps/" + self.getRaftPort());
-        nodeOptions.setSnapshotUri("/storage/snaps/" + self.getRaftPort());
+        String baseStoragePath = System.getenv("RAFT_STORAGE_BASE_PATH");
+        if (baseStoragePath == null || baseStoragePath.isEmpty()) {
+            baseStoragePath = "/var/data/kv-store";
+            System.out.println("RAFT_STORAGE_BASE_PATH environment variable not set, defaulting to: " + baseStoragePath);
+        }
 
-        resetDirectory("/storage/logs/" + self.getRaftPort());
-        nodeOptions.setLogUri("/storage/logs/" + self.getRaftPort());
+        String snapshotPath = baseStoragePath + "/snaps/" + self.getRaftPort();
+        resetDirectory(snapshotPath);
+        nodeOptions.setSnapshotUri(snapshotPath);
 
-        resetDirectory("/storage/meta/" + self.getRaftPort());
-        nodeOptions.setRaftMetaUri("/storage/meta/" + self.getRaftPort());
+        String logPath = baseStoragePath + "/logs/" + self.getRaftPort();
+        resetDirectory(logPath);
+        nodeOptions.setLogUri(logPath);
+
+        String metaPath = baseStoragePath + "/meta/" + self.getRaftPort();
+        resetDirectory(metaPath);
+        nodeOptions.setRaftMetaUri(metaPath);
 
         StateMachine sm = new MessageBrokerStateMachine();
         nodeOptions.setFsm(sm);
