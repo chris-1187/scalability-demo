@@ -42,7 +42,7 @@ public class RemoteBootstrapper {
         PartitionManager partitionManager = new PartitionManager();
 
         // Discover and Register All Partitions
-        for (int pId = 0; pId < totalPartitions; pId++) {
+        for (int pId = 0; pId < PartitionManager.getTotalPartitions(); pId++) {
             if (pId == ownPartitionId) {
                 // Setup for this node's OWN partition
                 List<MessageBrokerNode> allNodesInPartition = new ArrayList<>();
