@@ -38,7 +38,7 @@ public class OwnPartition extends Partition {
 
     public Status push(String queueName, String messageContent, UUID messageId){
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
-            PushEntry entry = new PushEntry(queueName, messageContent, UUID.randomUUID());
+            PushEntry entry = new PushEntry(queueName, messageContent, messageId);
             CompletableFuture<Status> futureStatus = entry.submit(raftNode);
             try {
                 return futureStatus.get();
@@ -61,7 +61,7 @@ public class OwnPartition extends Partition {
 
     public Status pop(String queueName, UUID messageId){
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
-            PopEntry entry = new PopEntry(queueName, UUID.randomUUID());
+            PopEntry entry = new PopEntry(queueName, messageId);
             CompletableFuture<Status> futureStatus = entry.submit(raftNode);
             try {
                 return futureStatus.get();

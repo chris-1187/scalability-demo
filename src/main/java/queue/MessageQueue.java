@@ -24,7 +24,7 @@ public class MessageQueue implements Serializable {
     }
 
     public synchronized void commit(UUID messageId){
-        if(!queue.isEmpty() && queue.peekLast().getMessageId() == messageId){
+        if(!queue.isEmpty() && queue.peekLast().getMessageId().equals(messageId)){
             queue.pollLast();
             lastClientToken = Optional.empty();
             nextTimeout = Instant.MIN;

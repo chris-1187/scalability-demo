@@ -10,6 +10,8 @@ import com.alipay.sofa.jraft.error.RaftError;
 import com.alipay.sofa.jraft.error.RaftException;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import queue.Message;
@@ -20,10 +22,8 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class MessageBrokerStateMachine implements StateMachine {
 
@@ -37,8 +37,16 @@ public class MessageBrokerStateMachine implements StateMachine {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageBrokerStateMachine.class);
 
-
     private final Map<String, MessageQueue> queues = new HashMap<>();
+
+    Cache<UUID, Long> uuidTTLCache;
+
+    public MessageBrokerStateMachine(){
+        uuidTTLCache = CacheBuilder.newBuilder()
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .maximumSize(10000)
+                .build();
+    }
 
 
     @Override
@@ -47,11 +55,13 @@ public class MessageBrokerStateMachine implements StateMachine {
             LogEntry entry = LogEntry.fromBuffer(iterator.getData());
             switch (entry){
                 case PushEntry push -> {
-                    System.out.println(iterator.getIndex());
-                    Message message = new Message(push.getMessageId(), push.getPayload(), iterator.getIndex());
-                    MessageQueue queue = queues.computeIfAbsent(push.getQueue(), k -> new MessageQueue(push.getQueue()));
-                    queue.insert(message);
-
+                    Long cacheEntry = uuidTTLCache.getIfPresent(push.getMessageId());
+                    if(cacheEntry == null || iterator.getIndex() < cacheEntry){
+                        Message message = new Message(push.getMessageId(), push.getPayload(), iterator.getIndex());
+                        MessageQueue queue = queues.computeIfAbsent(push.getQueue(), k -> new MessageQueue(push.getQueue()));
+                        queue.insert(message);
+                        uuidTTLCache.put(message.getMessageId(), message.getLogIndex());
+                    }
                 }
                 case PopEntry pop -> {
                     MessageQueue queue = queues.get(pop.getQueue());
@@ -83,6 +93,11 @@ public class MessageBrokerStateMachine implements StateMachine {
                 }
                 snapshotWriter.addFile(snapshotFile.getName());
             }
+            File cacheFile = new File(snapshotWriter.getPath(), "uuidTTLCache");
+            Map<UUID, Long> cacheSnapshot = new HashMap<>(uuidTTLCache.asMap());
+            try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(cacheFile))) {
+                out.writeObject(cacheSnapshot);
+            }
             closure.run(Status.OK());
         } catch (IOException e) {
             closure.run(new Status(RaftError.EIO, "Snapshot save failed: %s", e));
@@ -92,6 +107,7 @@ public class MessageBrokerStateMachine implements StateMachine {
     @Override
     public boolean onSnapshotLoad(SnapshotReader snapshotReader) {
         queues.clear();
+        uuidTTLCache.cleanUp();
         Path dir = Paths.get(snapshotReader.getPath());
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
@@ -100,6 +116,11 @@ public class MessageBrokerStateMachine implements StateMachine {
                     List<Message> snapshot = (List<Message>) in.readObject();
                     queues.put(queueName, new MessageQueue(queueName, snapshot));
                 }
+            }
+            File cacheFile = new File(snapshotReader.getPath(), "uuidTTLCache");
+            try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(cacheFile))){
+                Map<UUID, Long> cacheSnapshot = (Map<UUID, Long>) in.readObject();
+                uuidTTLCache.putAll(cacheSnapshot);
             }
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
