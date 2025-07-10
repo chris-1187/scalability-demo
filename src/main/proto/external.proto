@@ -28,11 +28,11 @@ message PushResponse {
 message PeekRequest {
   string queue_name = 1;
   // Optional token for ensuring "at-least-once"
-  optional string client_token = 2;
+  string client_token = 2;
 }
 // Response for a peek operation.
 message PeekResponse {
-  optional Message message = 1;
+  Message message = 1;
   bool found = 2;
 }
 
