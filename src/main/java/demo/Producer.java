@@ -49,12 +49,18 @@ public class Producer implements ProducerI, Runnable {
                 .build();
         External.PushRequest pushRequest = External.PushRequest.newBuilder()
                 .setMessage(message)
+                .setQueueName(queue_name)
                 .build();
 
         boolean success = false;
         while (!success && !Thread.currentThread().isInterrupted()) {
             logger.info("Thread: {} - pushing message {}", Thread.currentThread().getName(), pushRequest);
             success = blockingStub.push(pushRequest).getSuccess();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         return success;
     }

@@ -26,11 +26,7 @@ public class QService extends QServiceGrpc.QServiceImplBase {
 
     @Override
     public void push(PushRequest request, StreamObserver<PushResponse> responseObserver) {
-        PushResponse response = PushResponse.newBuilder().setSuccess(true).build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-
-        /*String queueName = request.getQueueName();
+        String queueName = request.getQueueName();
         Partition partition = partitionManager.lookupPartition(queueName);
         UUID messageId = UUID.fromString(request.getMessage().getMessageId());
 
@@ -38,7 +34,7 @@ public class QService extends QServiceGrpc.QServiceImplBase {
 
         PushResponse response = PushResponse.newBuilder().setSuccess(status.isOk()).build();
         responseObserver.onNext(response);
-        responseObserver.onCompleted();*/
+        responseObserver.onCompleted();
     }
 
     @Override

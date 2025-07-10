@@ -53,7 +53,7 @@ spec:
     matchLabels:
       app: kv-store
   serviceName: "kv-store-peers"
-  replicas: 3 # Number of Nodes. Possibly scaling like: kubectl scale statefulset kv-store --replicas=5 ? -> Nodes must be dynamically detectable
+  replicas: 9 # Number of Nodes. Possibly scaling like: kubectl scale statefulset kv-store --replicas=5 ? -> Nodes must be dynamically detectable
   template:
     metadata:
       labels:
@@ -62,12 +62,12 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: scalability-demo
-          image: ghcr.io/chris-1187/scalability-demo:latest # TODO
+          image: scalability-demo:latest # TODO
           resources:
             requests:
               memory: "256Mi"
               cpu: "250m"
-          imagePullPolicy: Always
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
               name: grpc-client
@@ -87,7 +87,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: REPLICA_COUNT
-              value: "3" # Number of Nodes
+              value: "9" # Number of Nodes
             - name: RAFT_STORAGE_BASE_PATH
               value: "/var/data/kv-store"
           volumeMounts:
@@ -133,10 +133,10 @@ spec:
     containerPolicies:
       - containerName: scalability-demo
         minAllowed:
-          cpu: "250m"
+          cpu: "125m"
           memory: "256Mi"
         maxAllowed:
-          cpu: "2"
-          memory: "4Gi"
+          cpu: "125m"
+          memory: "512Mi"
         controlledResources: ["cpu", "memory"]
 

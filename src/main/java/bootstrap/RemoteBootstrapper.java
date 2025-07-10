@@ -49,18 +49,16 @@ public class RemoteBootstrapper {
             if (pId == ownPartitionId) {
                 // Setup for this node's OWN partition
                 List<MessageBrokerNode> allNodesInPartition = new ArrayList<>();
+                // Find 'self' node from the list of all nodes in the partition
+                String ownHost = podName + "." + peerServiceName + ".default.svc.cluster.local";
+                MessageBrokerNode self = new RemoteMessageBrokerNode(ownHost);
                 for (int i = 0; i < nodesPerPartition; i++) {
                     int peerOrdinal = pId * nodesPerPartition + i;
-                    String peerHost = statefulSetName + "-" + peerOrdinal + "." + peerServiceName;
-                    allNodesInPartition.add(new RemoteMessageBrokerNode(peerHost));
+                    String peerHost = statefulSetName + "-" + peerOrdinal + "." + peerServiceName + ".default.svc.cluster.local";
+                    if (!peerHost.equals(ownHost)) {
+                        allNodesInPartition.add(new RemoteMessageBrokerNode(peerHost));
+                    }
                 }
-
-                // Find 'self' node from the list of all nodes in the partition
-                String ownHost = podName + "." + peerServiceName;
-                MessageBrokerNode self = allNodesInPartition.stream()
-                        .filter(node -> node.getHostname().equals(ownHost))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalStateException("Could not find self in node list"));
 
                 // OwnPartition constructor initializes the Raft group
                 OwnPartition partition = new OwnPartition(ownPartitionId, self, allNodesInPartition);
@@ -71,7 +69,7 @@ public class RemoteBootstrapper {
                 List<MessageBrokerNode> nodesInForeignPartition = new ArrayList<>();
                 for (int i = 0; i < nodesPerPartition; i++) {
                     int peerOrdinal = pId * nodesPerPartition + i;
-                    String peerHost = statefulSetName + "-" + peerOrdinal + "." + peerServiceName;
+                    String peerHost = statefulSetName + "-" + peerOrdinal + "." + peerServiceName + ".default.svc.cluster.local";
                     nodesInForeignPartition.add(new RemoteMessageBrokerNode(peerHost));
                 }
                 ForeignPartition partition = new ForeignPartition(pId, nodesInForeignPartition);
@@ -89,11 +87,6 @@ public class RemoteBootstrapper {
         internalServer.start();
 
         System.out.println("Node " + podOrdinal + " (Partition " + ownPartitionId + ") successfully started.");
-        Thread.sleep(10000);
-        RemoteMessageBrokerNode testnode = new RemoteMessageBrokerNode("kv-store-0");
-        Optional<External.PushResponse> testresponse = testnode.push("queue0", "sadaad", UUID.randomUUID());
-        assert testresponse.isPresent();
-        assert testresponse.get().getSuccess();
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
