@@ -3,6 +3,7 @@ package bootstrap;
 import networking.egress.MessageBrokerNode;
 import networking.egress.RemoteMessageBrokerNode;
 import networking.ingress.GrpcServer;
+import org.example.qservice.External;
 import partitioning.ForeignPartition;
 import partitioning.OwnPartition;
 import partitioning.PartitionManager;
@@ -10,6 +11,8 @@ import partitioning.PartitionManager;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 public class RemoteBootstrapper {
@@ -86,6 +89,11 @@ public class RemoteBootstrapper {
         internalServer.start();
 
         System.out.println("Node " + podOrdinal + " (Partition " + ownPartitionId + ") successfully started.");
+        Thread.sleep(10000);
+        RemoteMessageBrokerNode testnode = new RemoteMessageBrokerNode("kv-store-0");
+        Optional<External.PushResponse> testresponse = testnode.push("queue0", "sadaad", UUID.randomUUID());
+        assert testresponse.isPresent();
+        assert testresponse.get().getSuccess();
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {
