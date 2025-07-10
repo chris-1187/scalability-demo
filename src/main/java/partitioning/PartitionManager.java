@@ -84,7 +84,7 @@ public class PartitionManager {
         // Generate FQDNs (endpoints) for all peers
         this.peerFqdns = new ArrayList<>();
         for (int i = 0; i < replicaCount; i++) {
-            String peerEndpoints = String.format("%s-%d.%s.%s.svc.cluster.local:%d", basePodName, i, serviceName, namespace, peerPort);
+            String peerEndpoints = String.format("%s-%d.%s.%s.svc.cluster.local", basePodName, i, serviceName, namespace);
             peerFqdns.add(peerEndpoints);
         }
         System.out.println("Peer FQDNs: " + peerFqdns);
