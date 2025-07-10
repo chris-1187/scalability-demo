@@ -58,6 +58,7 @@ public abstract class MessageBrokerNode {
                 } catch (StatusRuntimeException e){
                     long waitTime = (long) (Constants.initialBackoffMillis * Math.pow(Constants.backoffMultiplier, i)
                             + ThreadLocalRandom.current().nextLong(-Constants.jitterMaxMillis, Constants.jitterMaxMillis));
+                    e.printStackTrace();
                     Thread.sleep(waitTime);
                 }
             }
