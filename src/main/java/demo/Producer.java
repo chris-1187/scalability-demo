@@ -41,11 +41,14 @@ public class Producer implements ProducerI, Runnable {
     }
 
     @Override
-    public boolean push(String message) {
+    public boolean push(String payload) {
         String uuid = java.util.UUID.randomUUID().toString();
-        External.PushRequest pushRequest = External.PushRequest.newBuilder()
-                .setMessageContent(message)
+        External.Message message = External.Message.newBuilder()
                 .setMessageId(uuid)
+                .setPayload(payload)
+                .build();
+        External.PushRequest pushRequest = External.PushRequest.newBuilder()
+                .setMessage(message)
                 .build();
 
         boolean success = false;

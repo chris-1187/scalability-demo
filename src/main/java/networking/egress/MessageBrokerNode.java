@@ -72,10 +72,13 @@ public abstract class MessageBrokerNode {
     public Optional<External.PushResponse> push(String queueName, String messageContent, UUID messageId){
         if(!isHealthy())
             return Optional.empty();
+        External.Message message = External.Message.newBuilder()
+                .setMessageId(messageId.toString())
+                .setPayload(messageContent)
+                .build();
         External.PushRequest request = External.PushRequest.newBuilder()
                 .setQueueName(queueName)
-                .setMessageContent(messageContent)
-                .setMessageId(messageId.toString())
+                .setMessage(message)
                 .build();
         return sendWithRetry(request, getqServiceStub()::push);
     }

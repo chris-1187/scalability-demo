@@ -28,9 +28,9 @@ public class QService extends QServiceGrpc.QServiceImplBase {
     public void push(PushRequest request, StreamObserver<PushResponse> responseObserver) {
         String queueName = request.getQueueName();
         Partition partition = partitionManager.lookupPartition(queueName);
-        UUID messageId = UUID.fromString(request.getMessageId());
+        UUID messageId = UUID.fromString(request.getMessage().getMessageId());
 
-        Status status = partition.push(request.getQueueName(), request.getMessageContent(), messageId);
+        Status status = partition.push(request.getQueueName(), request.getMessage().getPayload(), messageId);
 
         PushResponse response = PushResponse.newBuilder().setSuccess(status.isOk()).build();
         responseObserver.onNext(response);
