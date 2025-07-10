@@ -44,6 +44,7 @@ public abstract class MessageBrokerNode {
     //usage: sendWithRetry<RequestProtobufType, ResponseProtobufType>(request, qServiceStub::pop)
     public <RequestT extends GeneratedMessageV3, ResponseT extends GeneratedMessageV3>
     Optional<ResponseT> sendWithRetry(RequestT requestMessage, Function<RequestT, ResponseT> stub) {
+        System.out.println("called other node");
         if(!healthy && ignoreTimeout.compareTo(Instant.now()) > 0){ //should usually not happen if one calls isHealthy() before
             return Optional.empty();
         }
