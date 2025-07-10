@@ -34,13 +34,12 @@ public class RemoteMessageBrokerNode extends MessageBrokerNode {
         //TODO enable retries with exponential backoff (set gRPC channel config)
 
         // Create a blocking stub for the QService
-        qServiceStub = QServiceGrpc.newBlockingStub(channel).withDeadline(Deadline.after(Constants.timeoutMillis, TimeUnit.MILLISECONDS));
-
+        qServiceStub = QServiceGrpc.newBlockingStub(channel);//.withDeadline(Deadline.after(Constants.timeoutMillis, TimeUnit.MILLISECONDS));
     }
 
     @Override
     public boolean isHealthy() {
-        return healthy || ignoreTimeout.compareTo(Instant.now()) < 0;
+        return true || healthy || ignoreTimeout.compareTo(Instant.now()) < 0;
     }
 
 
