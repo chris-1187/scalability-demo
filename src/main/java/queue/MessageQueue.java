@@ -50,6 +50,10 @@ public class MessageQueue implements Serializable {
         return returnValue;
     }
 
+    public int getSize(){
+        return queue.size();
+    }
+
     public List<Message> snapshot(){
         List<Message> res = new ArrayList<>();
         //Snapshot is lock free and therefore not perfectly consistent, but it is sufficient to converge to the correct state when applying the log entries

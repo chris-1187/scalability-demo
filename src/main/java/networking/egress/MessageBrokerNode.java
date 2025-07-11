@@ -1,7 +1,6 @@
 package networking.egress;
 
 
-import com.alipay.sofa.jraft.Status;
 import com.alipay.sofa.jraft.entity.PeerId;
 import com.google.protobuf.GeneratedMessageV3;
 import io.grpc.ManagedChannel;
@@ -14,6 +13,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public abstract class MessageBrokerNode {
@@ -38,7 +38,7 @@ public abstract class MessageBrokerNode {
     }
 
     public QServiceGrpc.QServiceBlockingStub getqServiceStub() {
-        return qServiceStub;
+        return qServiceStub.withDeadlineAfter(Constants.TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     //usage: sendWithRetry<RequestProtobufType, ResponseProtobufType>(request, qServiceStub::pop)
@@ -50,15 +50,15 @@ public abstract class MessageBrokerNode {
         }
         int i = -1;
         try {
-            while (i < Constants.retries){
+            while (i < Constants.RETRIES){
                 i++;
                 try {
                     ResponseT response = stub.apply(requestMessage);
                     healthy = true;
                     return Optional.of(response);
                 } catch (StatusRuntimeException e){
-                    long waitTime = (long) (Constants.initialBackoffMillis * Math.pow(Constants.backoffMultiplier, i)
-                            + ThreadLocalRandom.current().nextLong(-Constants.jitterMaxMillis, Constants.jitterMaxMillis));
+                    long waitTime = (long) (Constants.INITIAL_BACKOFF_MILLIS * Math.pow(Constants.BACKOFF_MULTIPLIER, i)
+                            + ThreadLocalRandom.current().nextLong(-Constants.JITTER_MAX_MILLIS, Constants.JITTER_MAX_MILLIS));
                     e.printStackTrace();
                     Thread.sleep(waitTime);
                 }
@@ -67,7 +67,7 @@ public abstract class MessageBrokerNode {
             return Optional.empty();
         }
         healthy = false;
-        ignoreTimeout = Instant.now().plus(Constants.unhealthyNodeIgnoreTimeoutMillis);
+        ignoreTimeout = Instant.now().plus(Constants.UNHEALTHY_NODE_IGNORE_TIMEOUT_MILLIS);
         return Optional.empty();
     }
 

@@ -38,6 +38,8 @@ public class OwnPartition extends Partition {
 
     public Status push(String queueName, String messageContent, UUID messageId){
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
+            if(!stateMachine.hasSpace(queueName))
+                return new Status(-1, "Queue length limit reached. Try again later");
             PushEntry entry = new PushEntry(queueName, messageContent, messageId);
             CompletableFuture<Status> futureStatus = entry.submit(raftNode);
             try {

@@ -14,9 +14,6 @@ import java.util.function.Function;
 
 public class RemoteMessageBrokerNode extends MessageBrokerNode {
 
-
-
-
     public RemoteMessageBrokerNode(String hostname) {
         super(hostname);
         healthy = true;
@@ -31,15 +28,14 @@ public class RemoteMessageBrokerNode extends MessageBrokerNode {
                 .forTarget(target)
                 .usePlaintext()
                 .build();
-        //TODO enable retries with exponential backoff (set gRPC channel config)
 
         // Create a blocking stub for the QService
-        qServiceStub = QServiceGrpc.newBlockingStub(channel);//.withDeadline(Deadline.after(Constants.timeoutMillis, TimeUnit.MILLISECONDS));
+        qServiceStub = QServiceGrpc.newBlockingStub(channel);
     }
 
     @Override
     public boolean isHealthy() {
-        return true || healthy || ignoreTimeout.compareTo(Instant.now()) < 0;
+        return healthy || ignoreTimeout.compareTo(Instant.now()) < 0;
     }
 
 

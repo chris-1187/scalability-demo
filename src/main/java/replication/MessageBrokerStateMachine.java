@@ -12,6 +12,7 @@ import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import misc.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import queue.Message;
@@ -33,6 +34,14 @@ public class MessageBrokerStateMachine implements StateMachine {
             return queue.peek(clientToken);
         }
         return Optional.empty();
+    }
+
+    public boolean hasSpace(String queue){
+        MessageQueue mq = queues.get(queue);
+        if(mq != null && mq.getSize() >= Constants.MAX_QUEUE_LENGTH){
+            return false;
+        }
+        return true;
     }
 
     private static final Logger logger = LoggerFactory.getLogger(MessageBrokerStateMachine.class);
