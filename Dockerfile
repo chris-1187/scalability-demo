@@ -11,7 +11,7 @@ COPY --from=DEPENDENCIES /root/.m2 /root/.m2
 COPY pom.xml .
 COPY src /opt/app/src
 
-RUN mvn -B package -DskipTests
+RUN mvn -B clean package -DskipTests
 
 FROM eclipse-temurin:21-jdk-alpine
 
