@@ -1,14 +1,14 @@
 # =================================================================
 #  Headless Service for Peer Discovery
 #  - Creates stable DNS records for each pod in the StatefulSet.
-#  - Examples: kv-store-0.kv-store-peers, kv-store-1.kv-store-peers
+#  - Examples: dist-msg-queue-0.dist-msg-queue-peers, dist-msg-queue-1.dist-msg-queue-peers
 # =================================================================
 apiVersion: v1
 kind: Service
 metadata:
-  name: kv-store-peers
+  name: dist-msg-queue-peers
   labels:
-    app: kv-store
+    app: dist-msg-queue
 spec:
   ports:
     - name: grpc-internal # Port for ourr inter-node communication
@@ -19,7 +19,7 @@ spec:
       targetPort: 9999
   clusterIP: None # Headless Service
   selector:
-    app: kv-store
+    app: dist-msg-queue
 
 ---
 # =================================================================
@@ -28,9 +28,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kv-store-client
+  name: dist-msg-queue-client
   labels:
-    app: kv-store
+    app: dist-msg-queue
 spec:
   type: NodePort
   ports:
@@ -38,7 +38,7 @@ spec:
       port: 8080
       targetPort: 8080
   selector:
-    app: kv-store
+    app: dist-msg-queue
 
 ---
 # =================================================================
@@ -47,27 +47,28 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: kv-store
+  name: dist-msg-queue
 spec:
   selector:
     matchLabels:
-      app: kv-store
-  serviceName: "kv-store-peers"
-  replicas: 9 # Number of Nodes. Possibly scaling like: kubectl scale statefulset kv-store --replicas=5 ? -> Nodes must be dynamically detectable
+      app: dist-msg-queue
+  serviceName: "dist-msg-queue-peers"
+  replicas: 9 # Number of Nodes
   template:
     metadata:
       labels:
-        app: kv-store
+        app: dist-msg-queue
     spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: scalability-demo
-          image: ghcr.io/chris-1187/scalability-demo:latest # TODO
+          image: ghcr.io/chris-1187/scalability-demo:latest
+          # image: scalability-demo:latest # For local setup
           resources:
             requests:
               memory: "256Mi"
               cpu: "250m"
-          #imagePullPolicy: Never
+          #imagePullPolicy: Never # Just for local setup
           ports:
             - containerPort: 8080
               name: grpc-client
@@ -81,7 +82,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: PEER_SERVICE_NAME
-              value: "kv-store-peers"
+              value: "dist-msg-queue-peers"
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
@@ -89,10 +90,10 @@ spec:
             - name: REPLICA_COUNT
               value: "9" # Number of Nodes
             - name: RAFT_STORAGE_BASE_PATH
-              value: "/var/data/kv-store"
+              value: "/var/data/dist-msg-queue"
           volumeMounts:
             - name: data-storage
-              mountPath: /var/data/kv-store # Mount the persistent volume here
+              mountPath: /var/data/dist-msg-queue # Mount the persistent volume here
           # readinessProbe:
           #   exec:
           #     command: ["/bin/grpc_health_probe", "-addr=:8080"]
@@ -121,12 +122,12 @@ spec:
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: kv-store-vpa
+  name: dist-msg-queue-vpa
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: StatefulSet
-    name: kv-store
+    name: dist-msg-queue
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:

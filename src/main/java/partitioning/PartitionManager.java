@@ -78,7 +78,7 @@ public class PartitionManager {
             throw new IllegalArgumentException("REPLICA_COUNT must be an integer.", e);
         }
 
-        // Extract pod base name (e.g., "kv-store" from "kv-store-0")
+        // Extract pod base name (e.g., "dist-msg-queue" from "dist-msg-queue-0")
         String basePodName = podName.contains("-") ? podName.substring(0, podName.lastIndexOf('-')) : podName;
 
         // Generate FQDNs (endpoints) for all peers

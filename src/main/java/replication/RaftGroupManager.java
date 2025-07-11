@@ -51,7 +51,7 @@ public class RaftGroupManager {
 
         String baseStoragePath = System.getenv("RAFT_STORAGE_BASE_PATH");
         if (baseStoragePath == null || baseStoragePath.isEmpty()) {
-            baseStoragePath = "/var/data/kv-store";
+            baseStoragePath = "/var/data/dist-msg-queue";
             System.out.println("RAFT_STORAGE_BASE_PATH environment variable not set, defaulting to: " + baseStoragePath);
         }
 
