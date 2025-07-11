@@ -4,7 +4,7 @@
 docker build -t scalability-demo:latest .
 
 # Start the minikube cluster with enough resources for up to 9 Nodes
-minikube start --cpus=4 --memory=8192 --disk-size=20g --extra-config=kubelet.max-pods=250
+minikube start --cpus=5 --memory=8192 --disk-size=20g --extra-config=kubelet.max-pods=250
 
 # Init VPA
 minikube addons enable metrics-server
