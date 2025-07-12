@@ -7,6 +7,8 @@ import com.alipay.sofa.jraft.entity.PeerId;
 import misc.Constants;
 import networking.egress.MessageBrokerNode;
 import org.example.qservice.External;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import queue.Message;
 import replication.MessageBrokerStateMachine;
 import replication.PopEntry;
@@ -22,6 +24,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class OwnPartition extends Partition {
 
+    private static final Logger logger = LoggerFactory.getLogger(OwnPartition.class);
     private final List<MessageBrokerNode> peers;
     private final Node raftNode;
     private final MessageBrokerStateMachine stateMachine;
@@ -37,6 +40,13 @@ public class OwnPartition extends Partition {
     }
 
     public Status push(String queueName, String messageContent, UUID messageId){
+        if (queueName == null || queueName.isEmpty()){
+            logger.warn("""
+                    Error while inserting message: ID:"{}", Payload:"{}"
+                    Expected target queue to be a non empty string but was:"{}". Message dropped!
+                    """, messageId, queueName, queueName);
+            return new Status(-1, "Appending entry failed");
+        }
         if(raftNode.isLeader()){ //!! this information may be stale, and entries may get rejected (in very rare cases)
             if(!stateMachine.hasSpace(queueName))
                 return new Status(-1, "Queue length limit reached. Try again later");
