@@ -7,6 +7,7 @@ public class MockMessageBrokerNode extends MessageBrokerNode {
     public MockMessageBrokerNode(String name, int raftPort) {
         super(name);
         this.raftPort = raftPort;
+        initStub();
     }
 
     @Override

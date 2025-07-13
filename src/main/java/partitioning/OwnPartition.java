@@ -97,29 +97,23 @@ public class OwnPartition extends Partition {
     @Override
     public External.PeekResponse peek(String queueName, Optional<String> clientToken) {
         // Instead of checking for leadership for every peek, we use a lease provided through read index, which confirms leadership of the current node
-        leaseLock.lock();
-        try {
-            if(raftNode.isLeader() && Instant.now().compareTo(leaseTimeout) < 0){
-                Optional<Message> message = stateMachine.peekWithTimeout(queueName, clientToken);
-                if(message.isPresent()){
-                    External.Message messageResponse = External.Message.newBuilder().
-                            setMessageId(message.get().getMessageId().toString()).
-                            setPayload(message.get().getPayload()).
-                            build();
-                    return External.PeekResponse.newBuilder().setFound(true).setMessage(messageResponse).build();
-                }
-            // Else, we don't have a valid lease, return empty to avoid serving potentially stale data
-            } else {
-                Optional<MessageBrokerNode> leaderNode = getLeaderNode();
-                if(leaderNode.isPresent()){
-                    Optional<External.PeekResponse> optionalResponse = leaderNode.get().peek(queueName, clientToken);
-                    if(optionalResponse.isPresent())
-                        return optionalResponse.get();
-                }
+        if(raftNode.isLeader() && Instant.now().compareTo(leaseTimeout) < 0){
+            Optional<Message> message = stateMachine.peekWithTimeout(queueName, clientToken);
+            if(message.isPresent()){
+                External.Message messageResponse = External.Message.newBuilder().
+                        setMessageId(message.get().getMessageId().toString()).
+                        setPayload(message.get().getPayload()).
+                        build();
+                return External.PeekResponse.newBuilder().setFound(true).setMessage(messageResponse).build();
             }
-
-        } finally {
-            leaseLock.unlock();
+        // Else, we don't have a valid lease, return empty to avoid serving potentially stale data
+        } else {
+            Optional<MessageBrokerNode> leaderNode = getLeaderNode();
+            if(leaderNode.isPresent()){
+                Optional<External.PeekResponse> optionalResponse = leaderNode.get().peek(queueName, clientToken);
+                if(optionalResponse.isPresent())
+                    return optionalResponse.get();
+            }
         }
         return External.PeekResponse.newBuilder().setFound(false).build();
     }

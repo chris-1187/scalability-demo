@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class MessageBrokerNode {
 
@@ -34,7 +35,6 @@ public abstract class MessageBrokerNode {
 
     public MessageBrokerNode(String hostname){
         this.hostname = hostname;
-        initStub();
     }
 
     public QServiceGrpc.QServiceBlockingStub getqServiceStub() {
@@ -43,8 +43,7 @@ public abstract class MessageBrokerNode {
 
     //usage: sendWithRetry<RequestProtobufType, ResponseProtobufType>(request, qServiceStub::pop)
     public <RequestT extends GeneratedMessageV3, ResponseT extends GeneratedMessageV3>
-    Optional<ResponseT> sendWithRetry(RequestT requestMessage, Function<RequestT, ResponseT> stub) {
-        System.out.println("called other node");
+    Optional<ResponseT> sendWithRetry(RequestT requestMessage, Function<RequestT, ResponseT> senderFunc) {
         if(!healthy && ignoreTimeout.compareTo(Instant.now()) > 0){ //should usually not happen if one calls isHealthy() before
             return Optional.empty();
         }
@@ -53,7 +52,7 @@ public abstract class MessageBrokerNode {
             while (i < Constants.RETRIES){
                 i++;
                 try {
-                    ResponseT response = stub.apply(requestMessage);
+                    ResponseT response = senderFunc.apply(requestMessage);
                     healthy = true;
                     return Optional.of(response);
                 } catch (StatusRuntimeException e){
@@ -82,7 +81,7 @@ public abstract class MessageBrokerNode {
                 .setQueueName(queueName)
                 .setMessage(message)
                 .build();
-        return sendWithRetry(request, getqServiceStub()::push);
+        return sendWithRetry(request, (r -> getqServiceStub().push(r)));
     }
 
     public Optional<External.PopResponse> pop(String queueName, UUID messageId){
@@ -92,7 +91,7 @@ public abstract class MessageBrokerNode {
                 .setQueueName(queueName)
                 .setMessageId(messageId.toString())
                 .build();
-        return sendWithRetry(request, getqServiceStub()::pop);
+        return sendWithRetry(request, (r -> getqServiceStub().pop(r)));
     }
 
     public Optional<External.PeekResponse> peek(String queueName, Optional<String> clientToken){
@@ -102,7 +101,7 @@ public abstract class MessageBrokerNode {
                 .setQueueName(queueName)
                 .setClientToken(clientToken.orElse(""))
                 .build();
-        return sendWithRetry(request, getqServiceStub()::peek);
+        return sendWithRetry(request, (r -> getqServiceStub().peek(r)));
     }
 
     public String getHostname() {

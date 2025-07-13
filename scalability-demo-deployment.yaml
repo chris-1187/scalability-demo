@@ -53,7 +53,7 @@ spec:
     matchLabels:
       app: dist-msg-queue
   serviceName: "dist-msg-queue-peers"
-  replicas: 9 # Number of Nodes
+  replicas: 12 # Number of Nodes
   template:
     metadata:
       labels:
@@ -86,8 +86,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: REPLICA_COUNT
-              value: "9" # Number of Nodes
+            - name: NODE_COUNT
+              value: "12" # Number of Nodes
+            - name: REPLICATION_FACTOR
+              value: "3" # Number of nodes per partition (replication factor)
+            - name: PARTITIONS_PER_NODE
+              value: "3" # Number of partitions per node (vertical scaling factor)
             - name: RAFT_STORAGE_BASE_PATH
               value: "/var/data/dist-msg-queue"
           volumeMounts:
