@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# For local testing: Build image locally; Use when something changed
+# Build image locally
 docker build -t scalability-demo:latest .
 
 # Start the minikube cluster with enough resources for up to 9 Nodes
@@ -22,7 +22,6 @@ cd ../..
 
 # Load the image into minikube
 minikube image load scalability-demo:latest
-# minikube image load ghcr.io/chris-1187/scalability-demo:latest
 
 # apply deployment
 kubectl apply -f scalability-demo-deployment.yaml

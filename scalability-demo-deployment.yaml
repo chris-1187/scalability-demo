@@ -62,13 +62,12 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: scalability-demo
-          image: ghcr.io/chris-1187/scalability-demo:latest
-          # image: scalability-demo:latest # For local setup
+          image: scalability-demo:latest
           resources:
             requests:
               memory: "256Mi"
               cpu: "250m"
-          #imagePullPolicy: Never # Just for local setup
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
               name: grpc-client
