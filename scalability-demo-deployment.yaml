@@ -42,7 +42,7 @@ spec:
 
 ---
 # =================================================================
-#  StatefulSet for the Key-Value Store Nodes
+#  StatefulSet for the Distributed Message Broker Nodes
 # =================================================================
 apiVersion: apps/v1
 kind: StatefulSet
