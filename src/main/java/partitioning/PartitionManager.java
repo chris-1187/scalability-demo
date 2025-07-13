@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PartitionManager {
 
     // Static members for global partition configuration
-    private static final int TOTAL_PARTITIONS = 3; // Keep this constant
+    private final int numPartitions;
     private static final long MIN_INT_VALUE = (long) Integer.MIN_VALUE;
     private static final long MAX_INT_VALUE = (long) Integer.MAX_VALUE;
     private static final long TOTAL_INT_RANGE_SIZE = (MAX_INT_VALUE - MIN_INT_VALUE) + 1; // 2^32
@@ -19,35 +19,30 @@ public class PartitionManager {
     private static List<PartitionRange> partitionHashRanges;
 
     private final ConcurrentHashMap<Integer, Partition> partitionsById = new ConcurrentHashMap<>(); // partitioningRing
-    private final List<String> peerFqdns; // Can be used to initialize JRaft Nodes
-
-    static {
-        initializePartitionHashRanges();
-    }
 
     // Static method to initialize the hash ranges
-    private static void initializePartitionHashRanges() {
+    private void initializePartitionHashRanges() {
         if (partitionHashRanges != null) {
             return; // Already initialized
         }
 
-        partitionHashRanges = new ArrayList<>(TOTAL_PARTITIONS);
-        long rangePerPartition = TOTAL_INT_RANGE_SIZE / TOTAL_PARTITIONS;
-        long remainder = TOTAL_INT_RANGE_SIZE % TOTAL_PARTITIONS;
+        partitionHashRanges = new ArrayList<>(numPartitions);
+        long rangePerPartition = TOTAL_INT_RANGE_SIZE / numPartitions;
+        long remainder = TOTAL_INT_RANGE_SIZE % numPartitions;
 
         long currentStart = MIN_INT_VALUE;
 
-        for (int pId = 0; pId < TOTAL_PARTITIONS; pId++) {
+        for (int pId = 0; pId < numPartitions; pId++) {
             long currentEnd = currentStart + rangePerPartition - 1;
             if (pId < remainder) { // Distribute remainder evenly among the first partitions
                 currentEnd++;
             }
 
-            if (pId == TOTAL_PARTITIONS - 1) {
+            if (pId == numPartitions - 1) {
                 currentEnd = MAX_INT_VALUE; // Ensure the last partition covers up to MAX_VALUE
             }
 
-            partitionHashRanges.add(new PartitionRange(pId, currentStart, currentEnd));
+            partitionHashRanges.add(new PartitionRange(pId, currentStart, currentEnd, numPartitions));
             currentStart = currentEnd + 1;
         }
 
@@ -59,42 +54,13 @@ public class PartitionManager {
         partitionHashRanges = Collections.unmodifiableList(partitionHashRanges);
     }
 
-    public PartitionManager() {
-        int peerPort = 8081; // TODO: Maybe get from GrpcServer ?
-        // Read k8s env variables
-        String replicaCountStr = System.getenv("REPLICA_COUNT");
-        String podName = System.getenv("POD_NAME");
-        String serviceName = System.getenv("PEER_SERVICE_NAME");
-        String namespace = System.getenv("NAMESPACE");
-
-        if (replicaCountStr == null || podName == null || serviceName == null || namespace == null) {
-            throw new IllegalStateException("Missing required environment variables.");
-        }
-
-        int replicaCount;
-        try {
-            replicaCount = Integer.parseInt(replicaCountStr);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("REPLICA_COUNT must be an integer.", e);
-        }
-
-        // Extract pod base name (e.g., "dist-msg-queue" from "dist-msg-queue-0")
-        String basePodName = podName.contains("-") ? podName.substring(0, podName.lastIndexOf('-')) : podName;
-
-        // Generate FQDNs (endpoints) for all peers
-        this.peerFqdns = new ArrayList<>();
-        for (int i = 0; i < replicaCount; i++) {
-            String peerEndpoints = String.format("%s-%d.%s.%s.svc.cluster.local", basePodName, i, serviceName, namespace);
-            peerFqdns.add(peerEndpoints);
-        }
-        System.out.println("Peer FQDNs: " + peerFqdns);
+    public PartitionManager(int numPartitions) {
+        this.numPartitions = numPartitions;
+        initializePartitionHashRanges();
     }
 
-    public static int getTotalPartitions() {
-        return TOTAL_PARTITIONS;
-    }
-    public List<String> getPeerFqdns() {
-        return peerFqdns;
+    public int getTotalPartitions() {
+        return numPartitions;
     }
 
     /**

@@ -31,10 +31,10 @@ public class OwnPartition extends Partition {
     private ReentrantLock leaseLock = new ReentrantLock();
     private volatile Instant leaseTimeout = Instant.MIN;
 
-    public OwnPartition(int ringPosition, MessageBrokerNode self, List<MessageBrokerNode> peers){
+    public OwnPartition(int ringPosition, MessageBrokerNode self, List<MessageBrokerNode> peers, int partitionID){
         this.peers = peers;
         this.ringPosition = ringPosition;
-        raftNode = RaftGroupManager.setup(self, peers);
+        raftNode = RaftGroupManager.setup(self, peers, partitionID);
         stateMachine = (MessageBrokerStateMachine) raftNode.getOptions().getFsm();
         (new LeaseRenewalThread()).start();
     }

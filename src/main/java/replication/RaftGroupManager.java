@@ -4,6 +4,7 @@ import com.alipay.sofa.jraft.*;
 import com.alipay.sofa.jraft.conf.Configuration;
 import com.alipay.sofa.jraft.entity.PeerId;
 import com.alipay.sofa.jraft.option.NodeOptions;
+import com.alipay.sofa.jraft.rpc.RpcServer;
 import misc.Constants;
 import networking.egress.MockMessageBrokerNode;
 import networking.egress.MessageBrokerNode;
@@ -12,9 +13,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -43,7 +42,9 @@ public class RaftGroupManager {
 
     }
 
-    public static Node setup(MessageBrokerNode self, List<MessageBrokerNode> peers) {
+    private static Map<Integer, RpcServer> sharedServers = new HashMap<>();
+
+    public static Node setup(MessageBrokerNode self, List<MessageBrokerNode> peers, int partitionID) {
         NodeOptions nodeOptions = new NodeOptions();
         nodeOptions.setElectionTimeoutMs(Constants.ELECTION_TIMEOUT_MS);
         nodeOptions.setDisableCli(false);
@@ -55,15 +56,15 @@ public class RaftGroupManager {
             System.out.println("RAFT_STORAGE_BASE_PATH environment variable not set, defaulting to: " + baseStoragePath);
         }
 
-        String snapshotPath = baseStoragePath + "/snaps/" + self.getRaftPort();
+        String snapshotPath = baseStoragePath + "/snaps/" + partitionID + "_" + self.getRaftPort();
         resetDirectory(snapshotPath);
         nodeOptions.setSnapshotUri(snapshotPath);
 
-        String logPath = baseStoragePath + "/logs/" + self.getRaftPort();
+        String logPath = baseStoragePath + "/logs/" + partitionID + "_" + self.getRaftPort();
         resetDirectory(logPath);
         nodeOptions.setLogUri(logPath);
 
-        String metaPath = baseStoragePath + "/meta/" + self.getRaftPort();
+        String metaPath = baseStoragePath + "/meta/" + partitionID + "_" + self.getRaftPort();
         resetDirectory(metaPath);
         nodeOptions.setRaftMetaUri(metaPath);
 
@@ -84,18 +85,29 @@ public class RaftGroupManager {
 
         PeerId selfId = PeerId.parsePeer(parseNode(self));
         self.setRaftPeerID(selfId);
-
-        RaftGroupService raftGroupService = new RaftGroupService("partition", selfId, nodeOptions);
-        return raftGroupService.start();
+        System.out.println(configuration.toString());
+        RaftGroupService raftGroupService;
+        if(!sharedServers.containsKey(self.getRaftPort())){
+            raftGroupService = new RaftGroupService("partition-"+partitionID, selfId, nodeOptions);
+            sharedServers.put(self.getRaftPort(), raftGroupService.getRpcServer());
+            return raftGroupService.start(true);
+        } else {
+            raftGroupService = new RaftGroupService("partition-"+partitionID, selfId, nodeOptions, sharedServers.get(self.getRaftPort()), true);
+            return raftGroupService.start(false);
+        }
     }
 
 
     public static void main(String[] args) throws InterruptedException {
-        MessageBrokerNode[] nodes = new MessageBrokerNode[]{new MockMessageBrokerNode("localhost", 9991), new MockMessageBrokerNode("localhost", 9992), new MockMessageBrokerNode("localhost", 9993)};
+        MessageBrokerNode[] nodes = new MessageBrokerNode[]{new MockMessageBrokerNode("localhost", 8991), new MockMessageBrokerNode("localhost", 8992), new MockMessageBrokerNode("localhost", 8993)};
 
-        Node n1 = RaftGroupManager.setup(nodes[0], List.of(nodes));
-        Node n2 = RaftGroupManager.setup(nodes[1], List.of(nodes));
-        Node n3 = RaftGroupManager.setup(nodes[2], List.of(nodes));
+        Node n1 = RaftGroupManager.setup(nodes[0], List.of(nodes), 0);
+        Node n2 = RaftGroupManager.setup(nodes[1], List.of(nodes), 0);
+        Node n3 = RaftGroupManager.setup(nodes[2], List.of(nodes), 0);
+
+        Node n4 = RaftGroupManager.setup(nodes[0], List.of(nodes), 1);
+        Node n5 = RaftGroupManager.setup(nodes[1], List.of(nodes), 1);
+        Node n6 = RaftGroupManager.setup(nodes[2], List.of(nodes), 1);
 
         Node leader = null;
         while (leader == null) {

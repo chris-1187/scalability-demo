@@ -1,7 +1,5 @@
 package networking.ingress;
 
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import partitioning.PartitionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +7,6 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.health.v1.HealthCheckResponse;
 import io.grpc.protobuf.services.HealthStatusManager;
-import networking.QService;
 
 
 import java.io.IOException;

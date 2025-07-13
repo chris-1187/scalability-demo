@@ -16,7 +16,6 @@ public class MockMessageBrokerNode extends MessageBrokerNode {
                 .usePlaintext()
                 .directExecutor()
                 .build();
-        //TODO create stub
     }
 
     @Override

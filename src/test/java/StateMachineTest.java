@@ -16,7 +16,7 @@ public class StateMachineTest {
 
     @Before
     public void setUp() throws Exception {
-        node = new OwnPartition(0, new MockMessageBrokerNode("localhost", 9991), List.of());
+        node = new OwnPartition(0, new MockMessageBrokerNode("localhost", 9991), List.of(), 0);
     }
     @After
     public void tearDown() throws Exception {

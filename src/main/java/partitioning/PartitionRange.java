@@ -5,10 +5,13 @@ public class PartitionRange {
     private final long startHash;
     private final long endHash;
 
-    public PartitionRange(int partitionId, long startHash, long endHash) {
+    private final int numPartitions;
+
+    public PartitionRange(int partitionId, long startHash, long endHash, int numPartitions) {
         this.partitionId = partitionId;
         this.startHash = startHash;
         this.endHash = endHash;
+        this.numPartitions = numPartitions;
     }
 
     public int getPartitionId() {
@@ -24,7 +27,7 @@ public class PartitionRange {
     }
 
     public boolean contains(int hashValue) {
-        if (partitionId == PartitionManager.getTotalPartitions() - 1) {
+        if (partitionId == numPartitions - 1) {
             return hashValue >= startHash && hashValue <= endHash;
         }
         return hashValue >= startHash && hashValue < endHash; // Exclusive end for intermediate ranges
@@ -32,6 +35,6 @@ public class PartitionRange {
 
     @Override
     public String toString() {
-        return "Partition " + partitionId + ": [" + startHash + ", " + endHash + (partitionId == PartitionManager.getTotalPartitions() - 1 ? "]" : ")");
+        return "Partition " + partitionId + ": [" + startHash + ", " + endHash + (partitionId == numPartitions - 1 ? "]" : ")");
     }
 }
