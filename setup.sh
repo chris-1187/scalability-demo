@@ -1,10 +1,12 @@
 #!/bin/bash
 
+nodes="${1:-3}"
+
 # Build image locally
 docker build -t scalability-demo:latest .
 
-# Start the minikube cluster with enough resources for up to 9 Nodes
-minikube start --cpus=5 --memory=8192 --disk-size=20g --extra-config=kubelet.max-pods=250
+# Start the minikube cluster with enough resources for up to N Nodes
+minikube start --cpus=8 --memory=8192 --disk-size=20g --extra-config=kubelet.max-pods=250
 
 # Init VPA
 minikube addons enable metrics-server
@@ -29,13 +31,13 @@ sleep 5
 
 while true; do
     clear
-    echo -e "Waiting for 9 pods to be in 'Running' status...\n"
+    echo -e "Waiting for $nodes pods to be in 'Running' status...\n"
     kubectl get pods
 
     running_count=$(kubectl get pods --no-headers | grep 'Running' | wc -l)
 
-    if [ "$running_count" -ge 9 ]; then
-        echo -e "\n> 9 pods are running\n"
+    if [ "$running_count" -ge "$nodes" ]; then
+        echo -e "\n> $nodes pods are running\n"
         break
     fi
 
