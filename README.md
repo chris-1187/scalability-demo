@@ -2,8 +2,8 @@
 Prototyping Assignment of the 3S Scalability Engineering module (Group 9).
 
 This is a distributed message broker. It manages multiple named queues (FIFO) and allows 
-enqueue and dequeue messages with at-least-once processing through client commits.
-It's able to scale to scale to a very large number of queues, provides high availability and 
+to enqueue and dequeue messages with at-least-once processing through client commits.
+It's able to scale to a huge number of queues, provides high availability and 
 message durability and tolerates single node failures.
 
 ### Setup
