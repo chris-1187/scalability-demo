@@ -22,6 +22,8 @@ You can adjust the following parameters:
 * REPLICATION_FACTOR: number of nodes per partition
 * PARTITIONS_PER_NODE: number of partitions per node (vertical scaling factor)
 
+To cover pure vertical scaling, you can run the application with NODE_COUNT = 1, REPLICATION_FACTOR = 1 and PARTITIONS_PER_NODE = N. 
+
 ### Code Overview
 Here is a summary of the Java packages that you can find in our code 
 
