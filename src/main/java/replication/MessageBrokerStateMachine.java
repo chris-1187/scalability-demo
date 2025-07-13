@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class MessageBrokerStateMachine implements StateMachine {
@@ -46,7 +47,7 @@ public class MessageBrokerStateMachine implements StateMachine {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageBrokerStateMachine.class);
 
-    private final Map<String, MessageQueue> queues = new HashMap<>();
+    private final Map<String, MessageQueue> queues = new ConcurrentHashMap<>();
 
     Cache<UUID, Long> uuidTTLCache;
 
